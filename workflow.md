@@ -12,7 +12,7 @@ The design is the key:
 # Components & Workflow
 
 1. Controller → LeadAgent(user_request)
-2. LeadAgent → work_order(JSON)
+2. LeadAgent → work_order
 3. Controller spawns workers for subtasks (parallel or batch)
 4. Workers execute + return results → Controller
 5. Controller stores results → ContextStore, updates work_order.json

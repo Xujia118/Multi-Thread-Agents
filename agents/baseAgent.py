@@ -1,10 +1,11 @@
 from openai import OpenAI
-from typing import Type
+from typing import Type, TypeVar
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
 load_dotenv()
 
+T = TypeVar("T", bound=BaseModel)
 
 class Agent:
     """
@@ -38,13 +39,13 @@ class Agent:
     # 2) STRUCTURED OUTPUT  → validated JSON, WorkOrders, Plans, etc.
     # ============================================================
 
-    def generate_json(
+    def generate_structured(
         self,
         messages: list[dict],
-        schema: Type[BaseModel],     # ⬅ Pass Pydantic class, not dict
+        schema: Type[T],     # ⬅ Pass Pydantic class, not dict
         tools=None,
         instructions=None,
-    ):
+    ) -> T:
         response = self.client.responses.parse(
             model=self.model,
             input=messages,
@@ -52,4 +53,9 @@ class Agent:
             instructions=instructions,
             text_format=schema
         )
+
+        if response.output_parsed is None:
+            raise ValueError("Model failed to generate structured output.")
+        
         return response.output_parsed   # ⬅ Returns actual Python object
+

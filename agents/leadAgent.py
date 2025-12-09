@@ -8,7 +8,6 @@ It handles the work order to controller. This is the key to dynamic worker spawn
 from .baseAgent import Agent
 from .workerAgent import WorkerAgent
 from workOrder import WorkOrder, Subtask
-import json
 
 
 class LeadAgent(Agent):
@@ -41,7 +40,7 @@ class LeadAgent(Agent):
         """
 
         # 4. Call the LLM with the schema
-        raw_response = self.generate_json(
+        work_order = self.generate_structured(
             messages=[{"role": "user", "content": prompt}],
             tools=tools,
             instructions=system_instruction,
@@ -49,19 +48,8 @@ class LeadAgent(Agent):
         )
 
         # For debugging
-        print("raw_response:", raw_response)
-
-        # # 5. Parse the JSON response and validate it with Pydantic
-        # try:
-        #     # Assuming the response text is a valid JSON string
-        #     response_json = json.loads(raw_response.choices[0].message.content) # might be wrong
-        #     # Validate the data against the Pydantic schema
-        #     work_order = WorkOrder(**response_json)
-        #     return work_order
-        # except (json.JSONDecodeError, Exception) as e:
-        #     print(f"Failed to parse or validate WorkOrder: {e}")
-        #     # Handle the failure (e.g., retry, return an empty WorkOrder)
-        #     return WorkOrder(goal=user_request, subtasks=[])
+        print("work_order:", work_order) # This is an instance of WorkOrder class
+        return work_order
 
 
     def evaluate_tasks(self):
