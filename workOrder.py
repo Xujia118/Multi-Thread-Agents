@@ -21,21 +21,25 @@ work_order = {
 '''
 
 from typing import Any
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class Subtask(BaseModel):
     name: str
     tool: str
-    args: dict[str, Any]
-    result: Any | None = None
+    args: str = Field(description="The arguments for the tool as a JSON string, e.g. '{\"location\": \"NY\"}'")
+    result: str | None
     status: str = "pending"  # "pending", "completed", "failed"
+
+    # Set additionalProperties to False
+    model_config = ConfigDict(extra='forbid')
 
 
 class WorkOrder(BaseModel):
     goal: str
     subtasks: list[Subtask]
 
+    model_config = ConfigDict(extra='forbid')
 
     def update_subtask_result(self, subtask_name: str, result: Any, status: str):
         for subtask in self.subtasks:

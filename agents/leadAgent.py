@@ -5,8 +5,8 @@ For each subtask, it picks the right tool for the workers so that they won't hav
 It handles the work order to controller. This is the key to dynamic worker spawning!
 '''
 
-from baseAgent import Agent
-from workerAgent import WorkerAgent
+from .baseAgent import Agent
+from .workerAgent import WorkerAgent
 from workOrder import WorkOrder, Subtask
 import json
 
@@ -18,11 +18,8 @@ class LeadAgent(Agent):
     """
 
     # user_request comes from context, will update later
-    def plan_tasks(self, user_request) -> WorkOrder:
-        # 1. Get the JSON schema from the Pydantic model
-        work_order_schema = WorkOrder.model_json_schema()
-
-        # 2. Define the System Prompt
+    def plan_tasks(self, user_request, tools) -> WorkOrder:
+        # 1. Define the System Prompt
         system_instruction = (
             "You are a planning agent. You are given the user's request and a list of tools."
             "Your are to analyze the user's request, break it down into a list of atomic subtasks "
@@ -32,30 +29,39 @@ class LeadAgent(Agent):
             "adheres to the provided schema. Do not include any text outside the JSON object."
         )
 
-        # 3. Define the User Prompt
-        prompt = f"User Request: '{user_request}'\n\nBreak this request down into a WorkOrder."
+        # 2. Define the User Prompt
+        prompt = f"""
+        User Request:
+        {user_request}
+
+        Tools Available:
+        {tools}
+
+        Return a json following WorkOrder schema.
+        """
 
         # 4. Call the LLM with the schema
-        raw_response = self.generate_response(
-            input_list=[{"role": "user", "content": prompt}],
-            override_instructions=system_instruction,
-            response_schema=work_order_schema
+        raw_response = self.generate_json(
+            messages=[{"role": "user", "content": prompt}],
+            tools=tools,
+            instructions=system_instruction,
+            schema=WorkOrder
         )
 
         # For debugging
         print("raw_response:", raw_response)
 
-        # 5. Parse the JSON response and validate it with Pydantic
-        try:
-            # Assuming the response text is a valid JSON string
-            response_json = json.loads(raw_response.choices[0].message.content) # might be wrong
-            # Validate the data against the Pydantic schema
-            work_order = WorkOrder(**response_json)
-            return work_order
-        except (json.JSONDecodeError, Exception) as e:
-            print(f"Failed to parse or validate WorkOrder: {e}")
-            # Handle the failure (e.g., retry, return an empty WorkOrder)
-            return WorkOrder(goal=user_request, subtasks=[])
+        # # 5. Parse the JSON response and validate it with Pydantic
+        # try:
+        #     # Assuming the response text is a valid JSON string
+        #     response_json = json.loads(raw_response.choices[0].message.content) # might be wrong
+        #     # Validate the data against the Pydantic schema
+        #     work_order = WorkOrder(**response_json)
+        #     return work_order
+        # except (json.JSONDecodeError, Exception) as e:
+        #     print(f"Failed to parse or validate WorkOrder: {e}")
+        #     # Handle the failure (e.g., retry, return an empty WorkOrder)
+        #     return WorkOrder(goal=user_request, subtasks=[])
 
 
     def evaluate_tasks(self):

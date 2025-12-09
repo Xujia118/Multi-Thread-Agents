@@ -1,10 +1,9 @@
-from baseAgent import Agent
+from .baseAgent import Agent
 
 
 class WorkerAgent(Agent):
     """
     WorkerAgent extends from BaseAgent, but has a lower model.
-    At runtime, it receives a subtask and the necessary tool(s) for that subtask.
     """
     DEFAULT_WORKER_MODEL = "gpt-5-nano"
 
@@ -12,13 +11,12 @@ class WorkerAgent(Agent):
         super().__init__(model or self.DEFAULT_WORKER_MODEL)
 
 
-    def run(self, subtask, tool, instructions):
+    def run(self, worker_input, tool, instructions):
         """
-        Worker runs exactly one subtask with its assigned tool.
+        Worker runs exactly one subtask with its assigned tools.
         """
-        input_list = [{"role": "user", "content": subtask}]
         return self.generate_response(
-            input_list, 
+            worker_input, 
             tools=[tool], 
             instructions=instructions
         )

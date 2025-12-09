@@ -14,10 +14,11 @@ if __name__ == "__main__":
     register_tools(registry)
 
     controller = Controller()
-    context = ContextStore()
+    # context = ContextStore()
+    context = ""
 
     # Run the pipeline
-    user_request = "What's the weather like in San Diego and how to get there from 28 N 4 ST San Jose?"
+    user_request = "What's the weather like in Griffith Observatory and how to get there from 28 N 4 ST San Jose?"
     response = controller.run(
                 user_request, 
                 lead_agent, 
@@ -26,6 +27,6 @@ if __name__ == "__main__":
                 context
             )
     
-    print("\nFinal Output:")
-    print(response.output_text)
+    # print("\nFinal Output:")
+    # print(response.output_text)
 

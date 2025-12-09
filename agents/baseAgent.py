@@ -1,4 +1,6 @@
 from openai import OpenAI
+from typing import Type
+from pydantic import BaseModel
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -15,31 +17,39 @@ class Agent:
         self.client = OpenAI()
         self.model = model or self.DEFAULT_MODEL
 
+    # ============================================================
+    # 1) RAW LLM OUTPUT  → for chat, general prompts, creative output
+    # ============================================================
 
-    def generate_response(
-            self, 
-            input_list, 
-            instructions,
-            tools=None, 
-            response_schema: dict | None = None
-        ):
-        """
-        Single atomic interaction with the LLM.
-        The Agent doesn't know *how* to execute tools, only that they exist.
-        """
-
-        # Prepare the response format for JSON Mode
-        response_format = {"type": "text"}  # Default to text
-        if response_schema:
-            response_format = {"type": "json_object",
-                               "schema": response_schema}
-
-        response = self.client.responses.create(
+    def generate_text(
+        self,
+        messages: list[dict],
+        tools=None,
+        instructions=None,
+    ):
+        return self.client.responses.create(
             model=self.model,
-            instructions=instructions,
+            input=messages,
             tools=tools,
-            input=input_list,
-            response_format=response_format
-        )
-        return response
+            instructions=instructions
+        ).output_text   # ⬅ returns string directly
 
+    # ============================================================
+    # 2) STRUCTURED OUTPUT  → validated JSON, WorkOrders, Plans, etc.
+    # ============================================================
+
+    def generate_json(
+        self,
+        messages: list[dict],
+        schema: Type[BaseModel],     # ⬅ Pass Pydantic class, not dict
+        tools=None,
+        instructions=None,
+    ):
+        response = self.client.responses.parse(
+            model=self.model,
+            input=messages,
+            tools=tools,
+            instructions=instructions,
+            text_format=schema
+        )
+        return response.output_parsed   # ⬅ Returns actual Python object

@@ -11,7 +11,8 @@ def register(tools):
             "required": ["city"]
         }
     )
-    def search_web(query: str):
+    def check_weather(query: str):
+        print("weather tool is called!")
         pass
 
     @tools.register_tool(
@@ -23,5 +24,6 @@ def register(tools):
             "required": ["from", "to"]
         }
     )
-    def extract_text(url: str):
+    def get_map(url: str):
+        print("map tool is called!")
         pass
