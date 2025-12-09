@@ -6,28 +6,27 @@ load_dotenv()
 
 class Agent:
     """
-    The Agent holds the identity, model configuration, and tools.
-    It is responsible for generating the raw response from the LLM.
+    Based Agent only serves as a parent class for other agents.
+    Only model is needed at initialization.
     """
+    DEFAULT_MODEL = "gpt-5-mini"
 
-    def __init__(self, model, tools=None, instructions=""):
+    def __init__(self, model: str | None = None):
         self.client = OpenAI()
-        self.model = model
-        self.instructions = instructions
+        self.model = model or self.DEFAULT_MODEL
 
 
     def generate_response(
             self, 
             input_list, 
+            instructions,
             tools=None, 
-            override_instructions=None,
             response_schema: dict | None = None
         ):
         """
         Single atomic interaction with the LLM.
         The Agent doesn't know *how* to execute tools, only that they exist.
         """
-        active_instructions = override_instructions or self.instructions
 
         # Prepare the response format for JSON Mode
         response_format = {"type": "text"}  # Default to text
@@ -37,8 +36,8 @@ class Agent:
 
         response = self.client.responses.create(
             model=self.model,
+            instructions=instructions,
             tools=tools,
-            instructions=active_instructions,
             input=input_list,
             response_format=response_format
         )

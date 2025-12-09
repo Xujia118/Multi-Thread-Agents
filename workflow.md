@@ -11,37 +11,19 @@ The design is the key:
 
 # Components & Workflow
 
-┌──────────────┐      Decides tasks
-│   Router     │───────────────────────────┐
-└───────┬──────┘                           │
-        │ spawns N workers                 │
-        ↓                                  │
-┌──────────────────┐  run tasks in parallel│
-│   Controller      │──────────────────────┘
-│ (execution engine)│
-└───┬────────┬─────┘
-    │        │
-    ▼        ▼
-Worker1    Worker2    ... WorkerN
-(tool-aware, stateless executors)
-    │        │
-    └─── results → aggregator → evaluator → final answer
+1. Controller → LeadAgent(user_request)
+2. LeadAgent → work_order(JSON)
+3. Controller spawns workers for subtasks (parallel or batch)
+4. Workers execute + return results → Controller
+5. Controller stores results → ContextStore, updates work_order.json
+6. Controller → LeadAgent(results) for evaluation/summary
+7. If LeadAgent says incomplete → generate new work_order for missing parts
+8. Else → LeadAgent composes final answer for user
+
+Workers never touch context directly.
+Controller orchestrates state.
+LeadAgent reasons, not verifies truth.
 
 
-Critically, tools are available to all workers. Each workder must search the right tool based on the task it's assigned to. The tool-picking should be programmed instead of relying on llm generation. 
-
-The lead agent analyzes the task and decompose it into multiple subtasks such as: 
-[
-    "User wants to know the weather in New York",
-    "User wants to know hwo to get from X to Y"
-]
-It gets the complete tools available
-[
-    "weather_tool",
-    "map_tool",
-    ...
-]
-
-Retry & self-correction
-If any worker agent fails, the evaluator will mark its task "failed" in the work order.
-
+Lead Agent decides what needs to be done
+Controller decides how it is executed
