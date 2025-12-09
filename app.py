@@ -5,6 +5,9 @@ from tools.toolSet import register as register_tools
 from contextStore import ContextStore
 from controller import Controller
 
+
+
+
 if __name__ == "__main__":
     # Initialization
     lead_agent = LeadAgent()
@@ -12,9 +15,15 @@ if __name__ == "__main__":
 
     registry = ToolRegistry()
     register_tools(registry)
+    context = ContextStore()
 
-    controller = Controller()
-    # context = ContextStore()
+    controller = Controller(
+        lead_agent=lead_agent,
+        WorkerAgent=WorkerAgent,
+        registry=registry,
+        context=context_store,
+        max_steps=5
+    )
     context = ""
 
     # Run the pipeline
