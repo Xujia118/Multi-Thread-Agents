@@ -1,3 +1,4 @@
+import json
 from typing import Any
 from agents.workerAgent import WorkerAgent
 
@@ -18,6 +19,7 @@ class Controller:
             all_tools = self.registry.get_all_tools()
 
             # Step 2. Lead agent returns a work order
+            print(f"Lead agent processing user query and planning...")
             work_order = self.lead_agent.plan_tasks(user_request, all_tools)
 
             # Step 3. Spawn workers to handle subtasks in parallel
@@ -34,38 +36,37 @@ class Controller:
             # # Step 5. Send update work order to lead agent for evaluation
             # lead_agent.evaluate(updated_work_order)
 
-    def spawn_workers(self, work_order):
-        # We don't want to expose all to workers
-        # Only what they need to know: subtask and tool
-        running_subtasks = []
-
-        for subtask in running_subtasks:
-            # Create a worker object
-            worker = self.create_worker()
-
-            # Pass in parameters at runtime
-            worker_input = self._get_worker_input(subtask)
-            tool = registry.get_tool(subtask.tool)
-            instructions = f"""You are given a task and a tool. Use the tool to solve the task."""
-
-            worker.run(worker_input, tool, instructions)
+    def spawn_workers(self, work_order) -> None:
+        num_workers_needed = sum([1 for t in work_order.subtasks if t.status != "completed"])
+        print(f"Spawning {num_workers_needed} worker agents...")
 
         for subtask in work_order.subtasks:
-            if subtask.status != "completed":
-                running_subtasks.append(running_subtasks)
+            # Create a worker instance
+            worker = self.WorkerAgent()
 
-        return running_subtasks
+            # Pass subtask and tool to worker
+            worker_input = {
+                "task name": subtask.name,
+                "task args": subtask.args
+            }
+            
+            tool_obj = self.registry.get_tool(subtask.tool)
+            if tool_obj is None:
+                raise ValueError(f"Tool {subtask.tool} not found in registry")
 
-    def create_worker(self):
-        tool = registry.get_tool(subtask.tool)  # TODO: how to properly pass?
+            print("tool obj:", tool_obj)
 
-        system_instruction = (
+            instructions = f"""You are given a task and a tool. Use the tool to solve the task."""
 
-        )
+            # Call run() method
+            worker_response = worker.run(json.dumps(worker_input), tool_obj, instructions)
+            print("Worker response:", worker_response)
 
-        worker_instruction = f"Handle the task with the tool"  # TODO: rewrite the prompt
+            # Update status in work order
+            subtask.result = worker_response
+            subtask.status = "completed"
 
-        return WorkerAgent()
+
 
     def update_work_order_and_context_store(self):
         pass

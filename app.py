@@ -21,20 +21,14 @@ if __name__ == "__main__":
         lead_agent=lead_agent,
         WorkerAgent=WorkerAgent,
         registry=registry,
-        context=context_store,
+        context=context,
         max_steps=5
     )
     context = ""
 
     # Run the pipeline
     user_request = "What's the weather like in Griffith Observatory and how to get there from 28 N 4 ST San Jose?"
-    response = controller.run(
-                user_request, 
-                lead_agent, 
-                worker_agent, 
-                registry, 
-                context
-            )
+    response = controller.run(user_request)
     
     # print("\nFinal Output:")
     # print(response.output_text)

@@ -15,7 +15,7 @@ class WorkerAgent(Agent):
         """
         Worker runs exactly one subtask with its assigned tools.
         """
-        return self.generate_response(
+        return self.generate_text(
             worker_input, 
             tools=[tool], 
             instructions=instructions

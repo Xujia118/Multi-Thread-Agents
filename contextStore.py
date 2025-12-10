@@ -1,12 +1,11 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Any
-from workOrder import WorkOrder
+import uuid
 
 
 class ContextStore(BaseModel):
-    session_id: str
-    context: dict[str, Any] = {}
-    
+    session_id: str = Field(default_factory=lambda x: str(uuid.uuid4()))
+    context: dict[str, Any] = Field(default_factory=dict)
 
     def add_to_context(self, event):
         pass

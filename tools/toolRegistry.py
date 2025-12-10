@@ -33,4 +33,17 @@ class ToolRegistry:
         ]
 
     def get_tool(self, name):
-        return self.registry.get(name, {}).get("func")
+        """Return tool object suitable for OpenAI API."""
+        # Normalize tool name. openai API returns function.toolname format
+        if name.startswith("functions."):
+            name = name.replace("functions.", "")
+        
+        t = self.registry.get(name)
+        if not t:
+            return None 
+        return {
+            "type": "function",
+            "name": t["name"],
+            "description": t["description"],
+            "parameters": t["parameters"],
+        }
