@@ -24,7 +24,7 @@ if __name__ == "__main__":
         context=context,
         max_steps=5
     )
-    context = ""
+    context = "" # Placeholder
 
     # Run the pipeline
     user_request = "What's the weather like in Griffith Observatory and how to get there from 28 N 4 ST San Jose?"

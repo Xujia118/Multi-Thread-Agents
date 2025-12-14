@@ -1,6 +1,6 @@
 import json
 from typing import Any
-from agents.workerAgent import WorkerAgent
+from src.agents.workerAgent import WorkerAgent
 
 
 class Controller:

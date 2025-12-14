@@ -1,6 +1,6 @@
 import src.CONSTANTS as CONSTANTS
-from business_functions.get_weather import get_forecast
-from business_functions.get_directions import get_directions
+from src.business_functions.get_weather import get_forecast
+from src.business_functions.get_directions import get_directions
 
 """
 When writing tool descriptions for an LLM, remember this: The description is the primary trigger for tool selection.
