@@ -34,7 +34,7 @@ class ToolRegistry:
 
     def get_tool(self, name):
         """Return tool object suitable for OpenAI API."""
-        # Normalize tool name. openai API returns function.toolname format
+        # Normalize tool name. openai API returns functions.toolname format
         if name.startswith("functions."):
             name = name.replace("functions.", "")
         
