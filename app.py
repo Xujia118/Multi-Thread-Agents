@@ -1,9 +1,9 @@
-from agents.leadAgent import LeadAgent
-from agents.workerAgent import WorkerAgent
-from tools.toolRegistry import ToolRegistry
-from tools.toolSet import register as register_tools
-from contextStore import ContextStore
-from controller import Controller
+from src.agents.leadAgent import LeadAgent
+from src.agents.workerAgent import WorkerAgent
+from src.local_tools.toolRegistry import ToolRegistry
+from src.local_tools.toolSet import register as register_tools
+from src.contextStore import ContextStore
+from src.controller import Controller
 
 
 

@@ -1,5 +1,5 @@
-import CONSTANTS
-from business_functions.get_weather import get_weather
+import src.CONSTANTS as CONSTANTS
+from business_functions.get_weather import get_forecast
 from business_functions.get_directions import get_directions
 
 """
@@ -24,8 +24,8 @@ def register(tools):
             "required": ["city"]
         }
     )
-    def get_weahter_tool(query: str):
-        return get_weather(query)
+    def get_weahter_tool(lat: float, lon: float):
+        return get_forecast(lat, lon)
 
     @tools.register_tool(
         name=CONSTANTS.FIND_DIRECTIONS,

@@ -7,7 +7,7 @@ It handles the work order to controller. This is the key to dynamic worker spawn
 
 from .baseAgent import Agent
 from .workerAgent import WorkerAgent
-from workOrder import WorkOrder, Subtask
+from src.workOrder import WorkOrder, Subtask
 
 
 class LeadAgent(Agent):
