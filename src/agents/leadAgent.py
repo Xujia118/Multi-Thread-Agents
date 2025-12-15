@@ -6,8 +6,7 @@ It handles the work order to controller. This is the key to dynamic worker spawn
 '''
 
 from .baseAgent import Agent
-from .workerAgent import WorkerAgent
-from src.workOrder import WorkOrder, Subtask
+from src.workOrder import WorkOrder
 
 
 class LeadAgent(Agent):
@@ -47,12 +46,11 @@ class LeadAgent(Agent):
             schema=WorkOrder
         )
 
-        # For debugging
-        print("work_order:", work_order) # This is an instance of WorkOrder class
-        return work_order
+        return work_order  # This is an instance of WorkOrder class
 
 
     def evaluate_tasks(self):
+        # You can't validate truth, but only format
         prompt = """
         
         """

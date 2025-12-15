@@ -1,10 +1,10 @@
 import json
-from typing import Any
+from typing import Any, Type
 from src.agents.workerAgent import WorkerAgent
-
+from src.local_tools.toolRegistry import ToolRegistry
 
 class Controller:
-    def __init__(self, lead_agent, WorkerAgent, registry, context, max_steps=3):
+    def __init__(self, lead_agent, WorkerAgent: Type[WorkerAgent], registry: ToolRegistry, context, max_steps=3):
         self.lead_agent = lead_agent
         self.WorkerAgent = WorkerAgent # class not instance
         self.registry = registry
@@ -19,7 +19,7 @@ class Controller:
             all_tools = self.registry.get_all_tools()
 
             # Step 2. Lead agent returns a work order
-            print(f"Lead agent processing user query and planning...")
+            print(f"Lead agent processing user query and planning...\n")
             work_order = self.lead_agent.plan_tasks(user_request, all_tools)
 
             # Step 3. Spawn workers to handle subtasks in parallel
@@ -38,7 +38,7 @@ class Controller:
 
     def spawn_workers(self, work_order) -> None:
         num_workers_needed = sum([1 for t in work_order.subtasks if t.status != "completed"])
-        print(f"Spawning {num_workers_needed} worker agents...")
+        print(f"Spawning {num_workers_needed} worker agents...\n")
 
         for subtask in work_order.subtasks:
             # Create a worker instance
@@ -62,11 +62,8 @@ class Controller:
             if tool_obj is None:
                 raise ValueError(f"Tool {subtask.tool} not found in registry")
 
-            print("tool obj:", tool_obj)
-
-            instructions = f"""You are given a task and a tool. Use the tool to solve the task."""
-
             # Call run() method
+            instructions = f"""You are given a task and a tool. Use the tool to solve the task."""
             worker_response = worker.run(
                 worker_input = worker_messages, 
                 tool = tool_obj, 
