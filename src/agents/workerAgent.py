@@ -11,13 +11,15 @@ class WorkerAgent(Agent):
         super().__init__(model or self.DEFAULT_WORKER_MODEL)
 
 
-    def run(self, worker_input, tool, instructions):
+    def run(self, worker_input, tool, instructions, registry):
         """
         Worker runs exactly one subtask with its assigned tools.
         """
-        return self.generate_text(
+        response = self.generate_text(
             worker_input, 
             tools=[tool], 
             instructions=instructions
         )
+
+        return self.handle_tool_call(response, registry)
 

@@ -20,12 +20,12 @@ def register(tools):
         description="Provides the current weather conditions and forecast data for a specified city. Requires the name of the city.",
         parameters={
             "type": "object",
-            "properties": {"city": {"type": "string"}},
-            "required": ["city"]
+            "properties": {"location": {"type": "string"}},
+            "required": ["location"]
         }
     )
-    def get_weahter_tool(lat: float, lon: float):
-        return get_forecast(lat, lon)
+    def get_weahter_tool(location: str):
+        return get_forecast(location)
 
     @tools.register_tool(
         name=CONSTANTS.FIND_DIRECTIONS,

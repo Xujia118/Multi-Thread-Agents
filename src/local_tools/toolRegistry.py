@@ -47,3 +47,14 @@ class ToolRegistry:
             "description": t["description"],
             "parameters": t["parameters"],
         }
+
+
+    # The llm can't execute tool function. We have to do it.
+    def execute(self, name, **kwargs):
+        tool = self.registry.get(name)
+        
+        if not tool:
+            raise ValueError(f"Tool {name} not found")
+        
+        return tool["func"](**kwargs)
+

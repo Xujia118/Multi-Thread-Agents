@@ -49,6 +49,14 @@ class Controller:
                 "task name": subtask.name,
                 "task args": subtask.args
             }
+
+            # Convert to format accepted by openAI API
+            worker_messages = [
+                {
+                    "role": "user",
+                    "content": json.dumps(worker_input)
+                }
+            ]
             
             tool_obj = self.registry.get_tool(subtask.tool)
             if tool_obj is None:
@@ -59,7 +67,12 @@ class Controller:
             instructions = f"""You are given a task and a tool. Use the tool to solve the task."""
 
             # Call run() method
-            worker_response = worker.run(json.dumps(worker_input), tool_obj, instructions)
+            worker_response = worker.run(
+                worker_input = worker_messages, 
+                tool = tool_obj, 
+                instructions = instructions, 
+                registry=self.registry
+            )
             print("Worker response:", worker_response)
 
             # Update status in work order
