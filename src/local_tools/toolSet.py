@@ -1,6 +1,6 @@
 import src.CONSTANTS as CONSTANTS
 from src.business_functions.get_weather import get_forecast
-from src.business_functions.get_directions import get_directions
+from src.business_functions.get_hotels import get_hotels
 
 """
 When writing tool descriptions for an LLM, remember this: The description is the primary trigger for tool selection.
@@ -29,13 +29,13 @@ def register(tools):
 
     @tools.register_tool(
         name=CONSTANTS.FIND_DIRECTIONS,
-        description="Calculates the route and travel directions between two specific points. Use this when the user asks for directions from one location ('from') to another ('to').",
+        description="Provides a list of hotels nearby a location. Require the name of the location. Used when searching for hotels.",
         parameters={
             "type": "object",
-            "properties": {"from": {"type": "string"}, "to": {"type": "string"}},
-            "required": ["from", "to"]
+            "properties": {"location": {"type": "string"}},
+            "required": ["location"]
         }
     )
-    def get_directions_tool(from_: str, to: str):
-        return get_directions(from_, to)
+    def get_hotels_tool(location: str):
+        return get_hotels(location)
     
