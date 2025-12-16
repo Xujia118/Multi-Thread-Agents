@@ -2,14 +2,18 @@ import json
 from typing import Any, Type
 from src.agents.workerAgent import WorkerAgent
 from src.local_tools.toolRegistry import ToolRegistry
+from src.workOrder import Subtask, WorkOrder
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 
 class Controller:
     def __init__(self, lead_agent, WorkerAgent: Type[WorkerAgent], registry: ToolRegistry, context, max_steps=3):
         self.lead_agent = lead_agent
-        self.WorkerAgent = WorkerAgent # class not instance
+        self.WorkerAgent = WorkerAgent  # class not instance
         self.registry = registry
         self.context = context
         self.max_steps = max_steps
+        self.max_workers = 5  # TODO decide a better default
 
     def run(self, user_request):
 
@@ -37,49 +41,88 @@ class Controller:
             # lead_agent.evaluate(updated_work_order)
 
     def spawn_workers(self, work_order) -> None:
-        num_workers_needed = sum([1 for t in work_order.subtasks if t.status != "completed"])
-        print(f"Spawning {num_workers_needed} worker agents...\n")
+        tasks_to_run = [t for t in work_order.subtasks if t.status != "completed"]
+        num_workers_needed = len(tasks_to_run)
 
-        for subtask in work_order.subtasks:
-            # Create a worker instance
-            worker = self.WorkerAgent()
+        if num_workers_needed == 0:
+            print("No new tasks to run.\n")
+            return
 
-            # Pass subtask and tool to worker
-            worker_input = {
-                "task name": subtask.name,
-                "task args": subtask.args
+        print(f"Spawning {num_workers_needed} worker agents concurrently...\n")
+
+        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            future_to_subtask = {
+                executor.submit(self._execute_subtask, subtask): subtask 
+                for subtask in tasks_to_run
             }
 
-            # Convert to format accepted by openAI API
-            worker_messages = [
-                {
-                    "role": "user",
-                    "content": json.dumps(worker_input)
-                }
-            ]
-            
-            tool_obj = self.registry.get_tool(subtask.tool)
-            if tool_obj is None:
-                raise ValueError(f"Tool {subtask.tool} not found in registry")
+            for future in as_completed(future_to_subtask):
+                original_subtask = future_to_subtask[future]
+                try:
+                    updated_subtask = future.result()
+                    print(f"--- Task Result: '{updated_subtask}' | Status: {updated_subtask.status} ---")
+                except Exception as e:
+                    print(f"Worker for '{original_subtask}' generated an exception: {e}")
+                    original_subtask.status = "faile (thread error)}"
+                    original_subtask.result = str(e)
 
-            # Call run() method
-            instructions = f"""You are given a task and a tool. Use the tool to solve the task."""
+
+    def _execute_subtask(self, subtask: Subtask) -> 'Subtask':
+        """
+        A helper function to be run concurrently by the ThreadPoolExecutor.
+        It runs a single subtask and updates its status/result.
+        """
+        if subtask.status == "completed":
+            return subtask
+
+        # Create a worker instance
+        worker = self.WorkerAgent()
+
+        # Build the worker input message
+        worker_input = {
+            "task name": subtask.name,
+            "task args": subtask.args
+        }
+
+        worker_messages = [
+            {
+                "role": "user",
+                "content": json.dumps(worker_input)
+            }
+        ]
+
+        tool_obj = self.registry.get_tool(subtask.tool)
+        if tool_obj is None:
+            # Note: This will raise an exception in the worker thread.
+            # We should handle it within the thread to update the subtask status.
+            print(f"Error: Tool {subtask.tool} not found for subtask {subtask.name}")
+            subtask.status = "failed"
+            subtask.result = f"Tool not found: {subtask.tool}"
+            return subtask
+
+        # Call run() method
+        instructions = f"""You are given a task and a tool. Use the tool to solve the task."""
+        try:
             worker_response = worker.run(
-                worker_input = worker_messages, 
-                tool = tool_obj, 
-                instructions = instructions, 
+                worker_input=worker_messages,
+                tool=tool_obj,
+                instructions=instructions,
                 registry=self.registry
             )
-            print("Worker response:", worker_response)
-
-            # Update status in work order
             subtask.result = worker_response
             subtask.status = "completed"
+            print(f"Worker for '{subtask.name}' completed.")
+        except Exception as e:
+            subtask.result = str(e)
+            subtask.status = "failed"
+            print(f"Worker for '{subtask.name}' failed with error: {e}")
 
+        return subtask
 
 
     def update_work_order_and_context_store(self):
         pass
+
 
     def _get_worker_input(self, subtask) -> dict[str, Any]:
         pass
