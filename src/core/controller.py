@@ -3,8 +3,9 @@ from typing import Any, Type
 from src.agents.worker import WorkerAgent
 from src.agents.lead import LeadAgent
 from src.tools.local_tools.toolRegistry import ToolRegistry
-from src.work.order import SubtaskDefinition, WorkOrder
+from src.work.order import WorkOrder
 from src.work.state import WorkState, SubtaskState
+from src.work.result import WorkResult
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
@@ -16,6 +17,7 @@ class Controller:
         self.context = context
         self.max_steps = max_steps
         self.max_workers = 5  # TODO decide a better default
+
 
     def run(self, user_request):
         # PHASE 1: Planning
@@ -31,15 +33,15 @@ class Controller:
         # PHASE 2: Execution
         
         steps = 0
+
         while True:
-            # Step 3. Spawn workers to handle subtasks concurrently
-            self.spawn_workers(work_state)
-            # But here, workers should return work results to controller
-            # controller will construct events and update context store
-            # but here it's multithreading, so how to return work_result?
-            
-            # Then, controller should update work state and 
-            # Also constructs events and updates context store
+            # Step 3. Spawn workers to handle subtasks concurrently and return work results
+            work_results = self.spawn_workers(work_state, work_order)
+
+
+            # Step 4: Construct events and update context store
+
+
 
             # The lead agent evaluates work state. work_state.completed == true?
             decision = self.lead_agent.evaluate_tasks() # TODO: parameters, stuff
@@ -52,40 +54,61 @@ class Controller:
                 return 
 
 
-    def spawn_workers(self, work_state) -> None:
-        tasks_to_run = [t for t in work_state.subtasks if t.status != "completed"]
+    def spawn_workers(self, work_state : WorkState, work_order: WorkOrder) -> list[WorkResult]:
+        tasks_to_run = [t for t in work_state.subtasks.values() if t.status != "completed"]
         num_workers_needed = len(tasks_to_run)
 
         if num_workers_needed == 0:
             print("No new tasks to run.\n")
-            return
+            return []
 
         print(f"Spawning {num_workers_needed} worker agents concurrently...\n")
 
+        results: list[WorkResult] = []
+
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-            future_to_subtask = {
-                executor.submit(self._execute_subtask, subtask): subtask 
+            futures_to_subtask = {
+                executor.submit(self._execute_subtask, subtask, work_order): subtask 
                 for subtask in tasks_to_run
             }
 
-            for future in as_completed(future_to_subtask):
-                original_subtask = future_to_subtask[future]
+            for future in as_completed(futures_to_subtask):
+                original_subtask = futures_to_subtask[future]
                 try:
-                    updated_subtask = future.result()
-                    print(f"--- Task Result: '{updated_subtask}' | Status: {updated_subtask.status} ---")
+                    work_result = future.result()
+                    results.append(work_result)
+                    print(f"--- Task Result: '{work_result.task_name}' completed. ok={work_result.ok} ---")
                 except Exception as e:
-                    print(f"Worker for '{original_subtask}' generated an exception: {e}")
-                    original_subtask.status = "faile (thread error)}"
-                    original_subtask.result = str(e)
+                    print(f"Worker for '{original_subtask.name}' raised an exception: {e}")
+                    results.append(
+                        WorkResult(
+                            task_name=original_subtask.name,
+                            ok=False,
+                            data={},
+                            error={"message": f"Thread exception: {e}"}
+                        )
+                    )
+
+        return results
 
 
-    def _execute_subtask(self, subtask: SubtaskDefinition) -> 'SubtaskDefinition':
+    def _execute_subtask(self, subtask: SubtaskState, work_order: WorkOrder) -> WorkResult:
         """
         A helper function to be run concurrently by the ThreadPoolExecutor.
         It runs a single subtask and updates its status/result.
         """
         if subtask.status == "completed":
-            return subtask
+            return WorkResult(
+                task_name=subtask.name,
+                ok=True,
+                data={},
+                error={}
+            )
+        
+        # Retrieve data from work order to keep work state slim
+        subtask_def = next(sd for sd in work_order.subtasks if sd.name == subtask.name)
+        subtask_args = subtask_def.args
+        subtask_tool = subtask_def.tool
 
         # Create a worker instance
         worker = self.WorkerAgent()
@@ -93,7 +116,7 @@ class Controller:
         # Build the worker input message
         worker_input = {
             "task name": subtask.name,
-            "task args": subtask.args
+            "task args": subtask_args
         }
 
         worker_messages = [
@@ -103,33 +126,36 @@ class Controller:
             }
         ]
 
-        tool_obj = self.registry.get_tool(subtask.tool)
+        tool_obj = self.registry.get_tool(subtask_tool)
         if tool_obj is None:
-            # Note: This will raise an exception in the worker thread.
-            # We should handle it within the thread to update the subtask status.
-            print(f"Error: Tool {subtask.tool} not found for subtask {subtask.name}")
-            subtask.status = "failed"
-            subtask.result = f"Tool not found: {subtask.tool}"
-            return subtask
+            return WorkResult(
+                task_name=subtask.name,
+                ok=False,
+                data={},
+                error={"message": f"Tool {subtask_tool} not found"}
+            )
 
-        # Call run() method
-        instructions = f"""You are given a task and a tool. Use the tool to solve the task."""
+        # Let work start working!
         try:
             worker_response = worker.run(
                 worker_input=worker_messages,
                 tool=tool_obj,
-                instructions=instructions,
+                instructions="Use the tool to solve the task.",
                 registry=self.registry
             )
-            subtask.result = worker_response
-            subtask.status = "completed"
-            print(f"Worker for '{subtask.name}' completed.")
+            return WorkResult(
+                task_name=subtask.name,
+                ok=True,
+                data={"result": worker_response},
+                error={}
+            )
         except Exception as e:
-            subtask.result = str(e)
-            subtask.status = "failed"
-            print(f"Worker for '{subtask.name}' failed with error: {e}")
-
-        return subtask
+            return WorkResult(
+                task_name=subtask.name,
+                ok=False,
+                data={},
+                error={"message": str(e)}
+            )
 
 
     def update_work_order_and_context_store(self):
