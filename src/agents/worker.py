@@ -1,4 +1,4 @@
-from .baseAgent import Agent
+from .base import Agent
 
 
 class WorkerAgent(Agent):

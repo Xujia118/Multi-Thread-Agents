@@ -1,6 +1,6 @@
 import requests
 import src.CONSTANTS as CONSTANTS
-from . utils import geocode
+from .utils import geocode
 
 
 def get_grid_point(lat: float, lon: float) -> dict:
