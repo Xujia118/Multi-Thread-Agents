@@ -1,5 +1,5 @@
 import requests
-from . utils import geocode
+from .utils import geocode
 
 
 def get_hotels(location: str, limit: int = 10):

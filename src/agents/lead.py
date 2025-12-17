@@ -5,8 +5,8 @@ For each subtask, it picks the right tool for the workers so that they won't hav
 It handles the work order to controller. This is the key to dynamic worker spawning!
 '''
 
-from .baseAgent import Agent
-from src.workOrder import WorkOrder
+from .base import Agent
+from work.order import WorkOrder
 
 
 class LeadAgent(Agent):

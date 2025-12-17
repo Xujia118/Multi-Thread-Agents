@@ -1,8 +1,8 @@
 import json
 from typing import Any, Type
-from src.agents.workerAgent import WorkerAgent
+from agents.worker import WorkerAgent
 from src.local_tools.toolRegistry import ToolRegistry
-from src.workOrder import Subtask, WorkOrder
+from work.order import Subtask, WorkOrder
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
@@ -26,7 +26,7 @@ class Controller:
             print(f"Lead agent processing user query and planning...\n")
             work_order = self.lead_agent.plan_tasks(user_request, all_tools)
 
-            # Step 3. Spawn workers to handle subtasks in parallel
+            # Step 3. Spawn workers to handle subtasks concurrently
             self.spawn_workers(work_order)
 
             '''
@@ -126,3 +126,14 @@ class Controller:
 
     def _get_worker_input(self, subtask) -> dict[str, Any]:
         pass
+
+        
+    def handle_event(self, event):
+        wo_id = event.refs["work_order_id"]
+        idx = event.refs["subtask_index"]
+
+        runtime = work_runtime_map[wo_id]
+        runtime["subtask_state"][idx]["event_ids"].append(event["event_id"])
+
+        if event["type"] == "tool_result":
+            runtime["subtask_state"][idx]["status"] = "completed"
