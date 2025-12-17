@@ -1,47 +1,59 @@
 import json
 from typing import Any, Type
-from agents.worker import WorkerAgent
-from src.local_tools.toolRegistry import ToolRegistry
-from work.order import Subtask, WorkOrder
+from src.agents.worker import WorkerAgent
+from src.agents.lead import LeadAgent
+from src.tools.local_tools.toolRegistry import ToolRegistry
+from src.work.order import SubtaskDefinition, WorkOrder
+from src.work.state import WorkState, SubtaskState
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 class Controller:
-    def __init__(self, lead_agent, WorkerAgent: Type[WorkerAgent], registry: ToolRegistry, context, max_steps=3):
+    def __init__(self, lead_agent: LeadAgent, WorkerAgent: Type[WorkerAgent], registry: ToolRegistry, context, max_steps=3):
         self.lead_agent = lead_agent
-        self.WorkerAgent = WorkerAgent  # class not instance
+        self.WorkerAgent = WorkerAgent  # class not instance 
         self.registry = registry
         self.context = context
         self.max_steps = max_steps
         self.max_workers = 5  # TODO decide a better default
 
     def run(self, user_request):
+        # PHASE 1: Planning
 
-        # TODO: think about stop logic, it shouldn't be a fixed for loop
-        for _ in range(self.max_steps):
-            # Step 1. Pass user request and tools to lead agent
-            all_tools = self.registry.get_all_tools()
+        # Step 1: Lead agent receives user request and tools, and returns work order
+        print(f"Lead agent processing user query and planning...\n")
+        all_tools = self.registry.get_all_tools()
+        work_order = self.lead_agent.plan_tasks(user_request, all_tools)
 
-            # Step 2. Lead agent returns a work order
-            print(f"Lead agent processing user query and planning...\n")
-            work_order = self.lead_agent.plan_tasks(user_request, all_tools)
+        # Step 2: Controller makes work state from work order
+        work_state = WorkState.from_work_order(work_order)
 
+        # PHASE 2: Execution
+        
+        steps = 0
+        while True:
             # Step 3. Spawn workers to handle subtasks concurrently
-            self.spawn_workers(work_order)
+            self.spawn_workers(work_state)
+            # But here, workers should return work results to controller
+            # controller will construct events and update context store
+            # but here it's multithreading, so how to return work_result?
+            
+            # Then, controller should update work state and 
+            # Also constructs events and updates context store
 
-            '''
-            We can conceive an if else check. If evaluation is passed, we break; else continue, etc.
-            '''
+            # The lead agent evaluates work state. work_state.completed == true?
+            decision = self.lead_agent.evaluate_tasks() # TODO: parameters, stuff
 
-            # Step 4. Each worker sends back its operations done, result and status update
-            # Update context store and work order here
-            # updated_work_order = self.update_work_order_and_context_store()
+            if decision is True: # FINAL, to update semantic
+                return decision
+            
+            steps += 1
+            if steps >= self.max_steps:
+                return 
 
-            # # Step 5. Send update work order to lead agent for evaluation
-            # lead_agent.evaluate(updated_work_order)
 
-    def spawn_workers(self, work_order) -> None:
-        tasks_to_run = [t for t in work_order.subtasks if t.status != "completed"]
+    def spawn_workers(self, work_state) -> None:
+        tasks_to_run = [t for t in work_state.subtasks if t.status != "completed"]
         num_workers_needed = len(tasks_to_run)
 
         if num_workers_needed == 0:
@@ -67,7 +79,7 @@ class Controller:
                     original_subtask.result = str(e)
 
 
-    def _execute_subtask(self, subtask: Subtask) -> 'Subtask':
+    def _execute_subtask(self, subtask: SubtaskDefinition) -> 'SubtaskDefinition':
         """
         A helper function to be run concurrently by the ThreadPoolExecutor.
         It runs a single subtask and updates its status/result.

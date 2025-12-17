@@ -11,31 +11,31 @@ work_order = {
       "args": { "location": "New York" },
     },
     {
-      "name": "find_route",
-      "tool": "map_tool",
-      "args": { "from": "San Jose", "to": "New York" },
+      "name": "find_hotels",
+      "tool": "hotel_tool",
+      "args": { "location": "New York" },
     }
   ]
 }
 '''
 
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class SubtaskDefinition(BaseModel):
     name: str
     tool: str
-    args: dict 
+    args: str = Field(description="The arguments for the tool as a JSON string, e.g. '{\"location\": \"NY\"}'")
+
 
     # Set additionalProperties to False
     model_config = ConfigDict(extra='forbid')
 
 
 class WorkOrder(BaseModel):
-    work_order_id: str
+    id: str
     goal: str
     subtasks: list[SubtaskDefinition]
 
     model_config = ConfigDict(extra='forbid')
-

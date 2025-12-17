@@ -37,8 +37,21 @@ from datetime import datetime
 
 
 class SubtaskState(BaseModel):
+    """
+    Lightweight execution index for a single subtask.
+
+    This class does NOT store execution results or errors.
+    All execution facts (outputs, errors, timestamps) are recorded
+    as Events and referenced here by event_id.
+
+    Purpose:
+    - prevent duplicate execution
+    - track ownership ("running")
+    - enable safe retries and recovery
+    """
+
     name: str
-    status: Literal["pending", "completed", "failed"]
+    status: Literal["pending", "running", "completed", "failed"]
     event_ids: list[str]
 
     model_config = ConfigDict(extra='forbid')
@@ -51,3 +64,13 @@ class WorkState(BaseModel):
     subtasks: dict[int, SubtaskState]
 
     model_config = ConfigDict(extra='forbid')
+
+    @classmethod
+    def from_work_order(cls, work_order):
+        return cls(
+            work_order_id=work_order.id,
+            created_at=datetime.now(),
+            completed=False,
+            subtasks={i: SubtaskState(name=sub.name, status="pending", event_ids=[])
+                      for i, sub in enumerate(work_order.subtasks)}
+        )

@@ -1,20 +1,18 @@
-from src.agents.leadAgent import LeadAgent
-from src.agents.workerAgent import WorkerAgent
-from src.local_tools.toolRegistry import ToolRegistry
-from src.local_tools.toolSet import register as register_tools
-from src.contextStore import ContextStore
-from src.controller import Controller
-
-
+from src.agents.lead import LeadAgent
+from src.agents.worker import WorkerAgent
+from src.tools.local_tools.toolRegistry import ToolRegistry
+from src.tools.local_tools.toolSet import register as register_tools
+from src.core.context import ContextStore
+from src.core.controller import Controller
 
 
 if __name__ == "__main__":
     # Initialization
     lead_agent = LeadAgent()
-    worker_agent = WorkerAgent()
 
     registry = ToolRegistry()
     register_tools(registry)
+
     context = ContextStore()
 
     controller = Controller(
@@ -27,7 +25,7 @@ if __name__ == "__main__":
     context = "" # Placeholder
 
     # Run the pipeline
-    user_request = "What's the weather like in Griffith Observatory? Any hotels round to stay?"
+    user_request = "What's the weather like in Griffith Observatory? Any hotels around to stay?"
     response = controller.run(user_request)
     
     # print("\nFinal Output:")

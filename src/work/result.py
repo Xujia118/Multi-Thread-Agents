@@ -7,3 +7,4 @@ class WorkResult(BaseModel):
     data: dict
     error: dict
 
+    

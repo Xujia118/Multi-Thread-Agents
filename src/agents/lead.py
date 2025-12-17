@@ -5,8 +5,8 @@ For each subtask, it picks the right tool for the workers so that they won't hav
 It handles the work order to controller. This is the key to dynamic worker spawning!
 '''
 
-from .base import Agent
-from work.order import WorkOrder
+from src.agents.base import Agent
+from src.work.order import WorkOrder
 
 
 class LeadAgent(Agent):
@@ -50,7 +50,7 @@ class LeadAgent(Agent):
 
 
     def evaluate_tasks(self):
-        # You can't validate truth, but only format
+        # You can't validate truth, but only goal
         prompt = """
         
         """
