@@ -4,7 +4,6 @@ Work state tracks live progress, results and errors.
 work_state = {
   "work_order_id": "wo-001",
   "created_at": "2025-12-16T10:00:00Z",
-  "completed": False
   "subtasks": {
     "check_weather": {
       "name": "check_weather",
@@ -64,7 +63,6 @@ class SubtaskState(BaseModel):
 class WorkState(BaseModel):
     work_order_id: str
     created_at: datetime
-    completed: bool
     subtasks: dict[str, SubtaskState]
 
     model_config = ConfigDict(extra='forbid')
@@ -74,7 +72,6 @@ class WorkState(BaseModel):
         return cls(
             work_order_id=work_order.id,
             created_at=datetime.now(),
-            completed=False,
             subtasks={sub.name : SubtaskState(name=sub.name, tool=sub.tool, status="pending", event_ids=[])
                       for sub in work_order.subtasks}
         )
@@ -91,5 +88,13 @@ class WorkState(BaseModel):
             subtask.status = "completed" if result.ok else "failed"
             subtask.event_ids.append(event_id)
 
-      # Update overall completed flag
-      self.completed = all(s.status == "completed" for s in self.subtasks.values())
+
+    def get_runnable_subtasks(self) -> list[SubtaskState]:
+        runnable_tasks = []
+
+        for t in self.subtasks.values():
+           if t.status == "pending":
+              runnable_tasks.append(t)
+
+        return runnable_tasks
+

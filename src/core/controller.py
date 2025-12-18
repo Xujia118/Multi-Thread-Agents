@@ -11,11 +11,11 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 class Controller:
-    def __init__(self, lead_agent: LeadAgent, WorkerAgent: Type[WorkerAgent], registry: ToolRegistry, context: ContextStore, max_steps=3):
+    def __init__(self, lead_agent: LeadAgent, WorkerAgent: Type[WorkerAgent], registry: ToolRegistry, context_store: ContextStore, max_steps=3):
         self.lead_agent = lead_agent
         self.WorkerAgent = WorkerAgent  # class not instance 
         self.registry = registry
-        self.context = context
+        self.context_store = context_store
         self.max_steps = max_steps
         self.max_workers = 5  # TODO decide a better default
 
@@ -38,27 +38,29 @@ class Controller:
         while True:
             # Step 3. Spawn workers to handle subtasks concurrently and return work results
             work_results = self.spawn_workers(work_state, work_order)
+            print("work results:", work_results)
 
             # Step 4: Construct events and update context store
-            # Consider what this should return
             self.update_work_state_and_context_store(work_state, work_results)
 
-            # Step 5: Lead agent evaluates work state. Is work_state.completed == true?
-            decision = self.lead_agent.evaluate_tasks() # TODO: parameters, stuff
-
-            if decision is True: # FINAL, to update semantic
-                # Assemble the final summary
-                return decision
+            # Step 5: Check left pending tasks
+            runnable_subtasks = work_state.get_runnable_subtasks()
+            if not runnable_subtasks:
+                break
             
-            # Otherwise, make a new work order based on work state and context
+            # Step 6: Replan TODO
+            work_order = self.lead_agent.replan(work_order, work_state)       
             
             steps += 1
             if steps >= self.max_steps:
-                return 
+                break
+        
+        # Step 7: Lead agent summarizes
+        self.lead_agent.summarize(self.context_store)            
 
 
     def spawn_workers(self, work_state : WorkState, work_order: WorkOrder) -> list[WorkResult]:
-        tasks_to_run = [t for t in work_state.subtasks.values() if t.status != "completed"]
+        tasks_to_run = [t for t in work_state.subtasks.values() if t.status == "pending"]
         num_workers_needed = len(tasks_to_run)
 
         if num_workers_needed == 0:
@@ -166,7 +168,7 @@ class Controller:
             )
 
 
-    def update_work_state_and_context_store(self, work_state: WorkState, work_results: list[WorkResult]):
+    def update_work_state_and_context_store(self, work_state: WorkState, work_results: list[WorkResult]) -> None:
         # Step 1 : Create a new Event object and update context store
         for result in work_results:
             event = Event(
@@ -177,7 +179,7 @@ class Controller:
                 refs=Ref(work_order_id=work_state.work_order_id, task_name=result.task_name)
             )
         
-        event_id = self.context.add_event(event)
+            event_id = self.context_store.add_event(event)
 
         # Step 2: Update work state
         work_state.update(event_id, work_results)

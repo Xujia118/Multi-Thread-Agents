@@ -4,7 +4,7 @@ event_1 = {
   "timestamp": "2025-12-16T10:00:03Z",
   "task_name": "check_weather",
   "agent": "worker_weather",
-  "status": "success",
+  "status": "completed",
   "content": {
     "location": "Paris, France",
     "summary": "Mild weather, highs around 18°C, low rain chance",
