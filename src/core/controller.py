@@ -1,5 +1,5 @@
 import json
-from typing import Any, Type
+from typing import Type
 from src.agents.worker import WorkerAgent
 from src.agents.lead import LeadAgent
 from src.tools.local_tools.toolRegistry import ToolRegistry
@@ -40,6 +40,7 @@ class Controller:
             work_results = self.spawn_workers(work_state, work_order)
 
             # Step 4: Construct events and update context store
+            # Consider what this should return
             self.update_work_state_and_context_store(work_state, work_results)
 
             # Step 5: Lead agent evaluates work state. Is work_state.completed == true?
@@ -167,7 +168,7 @@ class Controller:
 
     def update_work_state_and_context_store(self, work_state: WorkState, work_results: list[WorkResult]):
         # Step 1 : Create a new Event object and update context store
-        for i, result in enumerate(work_results):
+        for result in work_results:
             event = Event(
                 task_name=result.task_name,
                 agent=result.tool,
@@ -176,11 +177,11 @@ class Controller:
                 refs=Ref(work_order_id=work_state.work_order_id, task_name=result.task_name)
             )
         
-        
+        event_id = self.context.add_event(event)
+
         # Step 2: Update work state
+        work_state.update(event_id, work_results)
 
-
-        pass
 
 
 

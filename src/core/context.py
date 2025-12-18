@@ -46,8 +46,9 @@ class ContextStore(BaseModel):
     context: dict[str, Event] = Field(default_factory=dict)
 
 
-    def add_event(self, event: Event) -> None:
+    def add_event(self, event: Event) -> str:
         self.context[event.event_id] = event
+        return event.event_id
 
 
     def get_event(self, event_id: str) -> Event:

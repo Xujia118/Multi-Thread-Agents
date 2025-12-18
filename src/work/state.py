@@ -8,13 +8,13 @@ work_state = {
   "subtasks": {
     "check_weather": {
       "name": "check_weather",
-      "tool": "weather_tool"
+      "tool": "weather_tool",
       "status": "pending",
       "event_ids": []
     },
     "find_hotels": {
       "name": "find_hotels",
-      "tool": "hotel_tool"
+      "tool": "hotel_tool",
       "status": "pending",
       "event_ids": []
     }
@@ -65,7 +65,7 @@ class WorkState(BaseModel):
     work_order_id: str
     created_at: datetime
     completed: bool
-    subtasks: dict[int, SubtaskState]
+    subtasks: dict[str, SubtaskState]
 
     model_config = ConfigDict(extra='forbid')
 
@@ -75,22 +75,21 @@ class WorkState(BaseModel):
             work_order_id=work_order.id,
             created_at=datetime.now(),
             completed=False,
-            subtasks={i: SubtaskState(name=sub.name, tool=sub.tool, status="pending", event_ids=[])
-                      for i, sub in enumerate(work_order.subtasks)}
+            subtasks={sub.name : SubtaskState(name=sub.name, tool=sub.tool, status="pending", event_ids=[])
+                      for sub in work_order.subtasks}
         )
 
   
-    def update_work_state(self, work_results: list[WorkResult]):
+    def update(self, event_id: str, work_results: list[WorkResult]):
       """
       Update this WorkState in place based on a list of WorkResult objects.
       """
       for result in work_results:
-          for subtask in self.subtasks.values():
-              if subtask.name == result.task_name:
-                  subtask.status = "completed" if result.ok else "failed"
-                  subtask.event_ids.append(result.data.get("event_id"))
-                  break
+          subtask = self.subtasks.get(result.task_name)
 
-      # update overall completed flag
-      self.completed = all(
-          s.status == "completed" for s in self.subtasks.values())
+          if subtask:
+            subtask.status = "completed" if result.ok else "failed"
+            subtask.event_ids.append(event_id)
+
+      # Update overall completed flag
+      self.completed = all(s.status == "completed" for s in self.subtasks.values())
