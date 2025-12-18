@@ -6,13 +6,15 @@ work_state = {
   "created_at": "2025-12-16T10:00:00Z",
   "completed": False
   "subtasks": {
-    0: {
+    "check_weather": {
       "name": "check_weather",
+      "tool": "weather_tool"
       "status": "pending",
       "event_ids": []
     },
-    1: {
+    "find_hotels": {
       "name": "find_hotels",
+      "tool": "hotel_tool"
       "status": "pending",
       "event_ids": []
     }
@@ -34,6 +36,7 @@ ContextStore (append-only evidence)
 from pydantic import BaseModel, ConfigDict
 from typing import Literal
 from datetime import datetime
+from src.work.result import WorkResult
 
 
 class SubtaskState(BaseModel):
@@ -51,6 +54,7 @@ class SubtaskState(BaseModel):
     """
 
     name: str
+    tool: str
     status: Literal["pending", "running", "completed", "failed"]
     event_ids: list[str]
 
@@ -71,6 +75,22 @@ class WorkState(BaseModel):
             work_order_id=work_order.id,
             created_at=datetime.now(),
             completed=False,
-            subtasks={i: SubtaskState(name=sub.name, status="pending", event_ids=[])
+            subtasks={i: SubtaskState(name=sub.name, tool=sub.tool, status="pending", event_ids=[])
                       for i, sub in enumerate(work_order.subtasks)}
         )
+
+  
+    def update_work_state(self, work_results: list[WorkResult]):
+      """
+      Update this WorkState in place based on a list of WorkResult objects.
+      """
+      for result in work_results:
+          for subtask in self.subtasks.values():
+              if subtask.name == result.task_name:
+                  subtask.status = "completed" if result.ok else "failed"
+                  subtask.event_ids.append(result.data.get("event_id"))
+                  break
+
+      # update overall completed flag
+      self.completed = all(
+          s.status == "completed" for s in self.subtasks.values())
