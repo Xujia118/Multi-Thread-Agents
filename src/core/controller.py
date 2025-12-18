@@ -1,26 +1,27 @@
 import json
-from typing import Any, Type
+from typing import Type
 from src.agents.worker import WorkerAgent
 from src.agents.lead import LeadAgent
 from src.tools.local_tools.toolRegistry import ToolRegistry
 from src.work.order import WorkOrder
 from src.work.state import WorkState, SubtaskState
 from src.work.result import WorkResult
+from src.core.context import Ref, Event, ContextStore
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 class Controller:
-    def __init__(self, lead_agent: LeadAgent, WorkerAgent: Type[WorkerAgent], registry: ToolRegistry, context, max_steps=3):
+    def __init__(self, lead_agent: LeadAgent, WorkerAgent: Type[WorkerAgent], registry: ToolRegistry, context_store: ContextStore, max_steps=3):
         self.lead_agent = lead_agent
         self.WorkerAgent = WorkerAgent  # class not instance 
         self.registry = registry
-        self.context = context
+        self.context_store = context_store
         self.max_steps = max_steps
         self.max_workers = 5  # TODO decide a better default
 
 
     def run(self, user_request):
-        # PHASE 1: Planning
+        # PHASE: Planning
 
         # Step 1: Lead agent receives user request and tools, and returns work order
         print(f"Lead agent processing user query and planning...\n")
@@ -30,32 +31,36 @@ class Controller:
         # Step 2: Controller makes work state from work order
         work_state = WorkState.from_work_order(work_order)
 
-        # PHASE 2: Execution
+        # PHASE: Execution
         
         steps = 0
 
         while True:
             # Step 3. Spawn workers to handle subtasks concurrently and return work results
             work_results = self.spawn_workers(work_state, work_order)
-
+            print("work results:", work_results)
 
             # Step 4: Construct events and update context store
+            self.update_work_state_and_context_store(work_state, work_results)
 
-
-
-            # The lead agent evaluates work state. work_state.completed == true?
-            decision = self.lead_agent.evaluate_tasks() # TODO: parameters, stuff
-
-            if decision is True: # FINAL, to update semantic
-                return decision
+            # Step 5: Check left pending tasks
+            runnable_subtasks = work_state.get_runnable_subtasks()
+            if not runnable_subtasks:
+                break
+            
+            # Step 6: Replan TODO
+            work_order = self.lead_agent.replan(work_order, work_state)       
             
             steps += 1
             if steps >= self.max_steps:
-                return 
+                break
+        
+        # Step 7: Lead agent summarizes
+        self.lead_agent.summarize(self.context_store)            
 
 
     def spawn_workers(self, work_state : WorkState, work_order: WorkOrder) -> list[WorkResult]:
-        tasks_to_run = [t for t in work_state.subtasks.values() if t.status != "completed"]
+        tasks_to_run = [t for t in work_state.subtasks.values() if t.status == "pending"]
         num_workers_needed = len(tasks_to_run)
 
         if num_workers_needed == 0:
@@ -83,6 +88,7 @@ class Controller:
                     results.append(
                         WorkResult(
                             task_name=original_subtask.name,
+                            tool=original_subtask.tool,
                             ok=False,
                             data={},
                             error={"message": f"Thread exception: {e}"}
@@ -100,6 +106,7 @@ class Controller:
         if subtask.status == "completed":
             return WorkResult(
                 task_name=subtask.name,
+                tool=subtask.tool,
                 ok=True,
                 data={},
                 error={}
@@ -130,12 +137,13 @@ class Controller:
         if tool_obj is None:
             return WorkResult(
                 task_name=subtask.name,
+                tool=subtask.tool,
                 ok=False,
                 data={},
                 error={"message": f"Tool {subtask_tool} not found"}
             )
 
-        # Let work start working!
+        # Let worker start working!
         try:
             worker_response = worker.run(
                 worker_input=worker_messages,
@@ -145,6 +153,7 @@ class Controller:
             )
             return WorkResult(
                 task_name=subtask.name,
+                tool=subtask.tool,
                 ok=True,
                 data={"result": worker_response},
                 error={}
@@ -152,18 +161,32 @@ class Controller:
         except Exception as e:
             return WorkResult(
                 task_name=subtask.name,
+                tool=subtask.tool,
                 ok=False,
                 data={},
                 error={"message": str(e)}
             )
 
 
-    def update_work_order_and_context_store(self):
-        pass
+    def update_work_state_and_context_store(self, work_state: WorkState, work_results: list[WorkResult]) -> None:
+        # Step 1 : Create a new Event object and update context store
+        for result in work_results:
+            event = Event(
+                task_name=result.task_name,
+                agent=result.tool,
+                status="completed" if result.ok else "failed",
+                content=result.data if result.data else result.error,
+                refs=Ref(work_order_id=work_state.work_order_id, task_name=result.task_name)
+            )
+        
+            event_id = self.context_store.add_event(event)
+
+        # Step 2: Update work state
+        work_state.update(event_id, work_results)
 
 
-    def _get_worker_input(self, subtask) -> dict[str, Any]:
-        pass
+
+
 
         
     def handle_event(self, event):

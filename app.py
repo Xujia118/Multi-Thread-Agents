@@ -13,13 +13,13 @@ if __name__ == "__main__":
     registry = ToolRegistry()
     register_tools(registry)
 
-    context = ContextStore()
+    context_store = ContextStore()
 
     controller = Controller(
         lead_agent=lead_agent,
         WorkerAgent=WorkerAgent,
         registry=registry,
-        context=context,
+        context_store=context_store,
         max_steps=5
     )
     context = "" # Placeholder

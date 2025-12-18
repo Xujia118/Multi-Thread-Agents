@@ -4,15 +4,16 @@ Work state tracks live progress, results and errors.
 work_state = {
   "work_order_id": "wo-001",
   "created_at": "2025-12-16T10:00:00Z",
-  "completed": False
   "subtasks": {
-    0: {
+    "check_weather": {
       "name": "check_weather",
+      "tool": "weather_tool",
       "status": "pending",
       "event_ids": []
     },
-    1: {
+    "find_hotels": {
       "name": "find_hotels",
+      "tool": "hotel_tool",
       "status": "pending",
       "event_ids": []
     }
@@ -34,6 +35,7 @@ ContextStore (append-only evidence)
 from pydantic import BaseModel, ConfigDict
 from typing import Literal
 from datetime import datetime
+from src.work.result import WorkResult
 
 
 class SubtaskState(BaseModel):
@@ -51,6 +53,7 @@ class SubtaskState(BaseModel):
     """
 
     name: str
+    tool: str
     status: Literal["pending", "running", "completed", "failed"]
     event_ids: list[str]
 
@@ -60,8 +63,7 @@ class SubtaskState(BaseModel):
 class WorkState(BaseModel):
     work_order_id: str
     created_at: datetime
-    completed: bool
-    subtasks: dict[int, SubtaskState]
+    subtasks: dict[str, SubtaskState]
 
     model_config = ConfigDict(extra='forbid')
 
@@ -70,7 +72,29 @@ class WorkState(BaseModel):
         return cls(
             work_order_id=work_order.id,
             created_at=datetime.now(),
-            completed=False,
-            subtasks={i: SubtaskState(name=sub.name, status="pending", event_ids=[])
-                      for i, sub in enumerate(work_order.subtasks)}
+            subtasks={sub.name : SubtaskState(name=sub.name, tool=sub.tool, status="pending", event_ids=[])
+                      for sub in work_order.subtasks}
         )
+
+  
+    def update(self, event_id: str, work_results: list[WorkResult]):
+      """
+      Update this WorkState in place based on a list of WorkResult objects.
+      """
+      for result in work_results:
+          subtask = self.subtasks.get(result.task_name)
+
+          if subtask:
+            subtask.status = "completed" if result.ok else "failed"
+            subtask.event_ids.append(event_id)
+
+
+    def get_runnable_subtasks(self) -> list[SubtaskState]:
+        runnable_tasks = []
+
+        for t in self.subtasks.values():
+           if t.status == "pending":
+              runnable_tasks.append(t)
+
+        return runnable_tasks
+
