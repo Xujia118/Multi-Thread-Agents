@@ -88,13 +88,7 @@ class WorkState(BaseModel):
             subtask.status = "completed" if result.ok else "failed"
             subtask.event_ids.append(event_id)
 
-
-    def get_runnable_subtasks(self) -> list[SubtaskState]:
-        runnable_tasks = []
-
-        for t in self.subtasks.values():
-           if t.status == "pending":
-              runnable_tasks.append(t)
-
-        return runnable_tasks
+    @property
+    def all_tasks_completed(self) -> bool:
+        return all(t.status == "completed" for t in self.subtasks.values())
 

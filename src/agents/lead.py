@@ -51,10 +51,6 @@ class LeadAgent(Agent):
 
         return work_order  # This is an instance of WorkOrder class
 
-    def replan(self, work_order: WorkOrder, work_state: WorkState) -> WorkOrder:
-        # Try to reuse the plan_tasks() method
-        pass
-
 
     def summarize(self, context_store: ContextStore):
         completed_events = [event.content for event in context_store.context.values(
