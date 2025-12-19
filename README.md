@@ -1,12 +1,16 @@
-# Goal
-Create an agentic system with router and worker llms, capable of answering a precise question
-on weather or direction, or answering both and querying in parallel.
+# Projet Overview
 
-The design is the key:
-- The number of workers must be dynamic
-- The tools must be available to all workers
-- Each worker only does its piece of job
-- There must be an evaluation step before the final output
+A resilient, multi-agent orchestration framework capable of autonomous task decomposition and parallel execution.
+
+- **Orchestration & Control**: Utilize a central Controller and Lead Agent to transform high-level user intent into actionable execution plans.
+
+- **Elastic Worker Spawning**: Dynamically instantiate worker agents based on the complexity and volume of tasks identified during the planning phase.
+
+- **Concurrency & Parallelism**: Execute multiple tool-based queries simultaneously to minimize latency and handle multi-faceted requests.
+
+- **Extensible Tool Architecture**: Provide a "plug-and-play" interface that allows the system to ingest and utilize any new tool or API without core logic changes.
+
+- **Fault Tolerance**: Implement robust error handling and retry logic, allowing agents to self-correct or re-plan when a tool or worker fails.
 
 
 # Components & Workflow
