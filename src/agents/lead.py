@@ -18,6 +18,9 @@ class LeadAgent(Agent):
     It can break down user requests into subtasks, assign tools, generate and evaluate work order.
     """
 
+    def __init__(self, client, model: str | None = None):
+        super().__init__(client, model)
+
     # user_request comes from context, will update later
     def plan_tasks(self, user_request, tools) -> WorkOrder:
         # 1. Define the System Prompt
@@ -67,7 +70,7 @@ class LeadAgent(Agent):
         )
 
         summary_text = self._extract_text(llm_response)
-        print("Lead Agent Report:", summary_text)
+        print("Lead Agent Report:\n", summary_text)
         return summary_text
 
 

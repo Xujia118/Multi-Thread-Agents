@@ -7,8 +7,8 @@ class WorkerAgent(Agent):
     """
     DEFAULT_WORKER_MODEL = "gpt-5-nano"
 
-    def __init__(self, model=None):
-        super().__init__(model or self.DEFAULT_WORKER_MODEL)
+    def __init__(self, client, model=None):
+        super().__init__(client, model or self.DEFAULT_WORKER_MODEL)
 
 
     def run(self, worker_input, tool, instructions, registry):

@@ -1,4 +1,3 @@
-from openai import OpenAI
 from typing import Type, TypeVar
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -15,8 +14,8 @@ class Agent:
     """
     DEFAULT_MODEL = "gpt-5-mini"
 
-    def __init__(self, model: str | None = None):
-        self.client = OpenAI()
+    def __init__(self, client, model: str | None = None):
+        self.client = client
         self.model = model or self.DEFAULT_MODEL
 
     # ============================================================
